@@ -71,6 +71,7 @@ Hints: 1) Use the `resp_body_json` function. 2) The first row of the matrix will
 ```{r}
 population <- resp_body_json(response) |> 
   do.call(rbind, args = _)
+population[c(1,2),]
 ```
 
 6. Examine the `population` matrix you just created. Notice that 1) it is not tidy, 2) the column types are not what we want, and 3) the first row is a header. Convert `population` to a tidy dataset. Remove the state ID column and change the name of the column with state names to `state_name`. Add a column with state abbreviations called `state`. Make sure you assign the abbreviations for DC and PR correctly. Hint: Use the **janitor** package to make the first row the header. 
@@ -102,6 +103,8 @@ population <- population |>
       TRUE ~ state.abb[match(state_name, state.name)]
     )
   )
+
+population
 ```
 
 7. As a check, make a barplot of states' 2021 and 2022 populations. Show the state names in the y-axis ordered by population size.  Hint: You will need to use `reorder` and use `facet_wrap`.
@@ -139,13 +142,14 @@ regions <- fromJSON(url) |>
   unnest(states) |>
   rename(state_name = states)
 
-# Shorten the long region name
 regions <- regions |>
   mutate(region_name = if_else(
     region_name == "New York and New Jersey, Puerto Rico, Virgin Islands",
     "NY/NJ/PR/VI",
     region_name
   ))
+
+head(regions)
 ```
 
 9. Add a region and region name columns to the `population` data frame.
@@ -166,7 +170,9 @@ api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
 cases_raw <- request(api) |>
   req_perform() |>
   resp_body_json(simplifyVector = TRUE) |>
-  as_tibble() 
+  as_tibble()
+
+nrow(cases_raw)
 ```
 
 We see exactly 1,000 rows. We should be seeing over $52 \times 3$ rows per state.
@@ -187,6 +193,8 @@ cases <- request(api) |>
     date = as.Date(date),
     cases = as.numeric(cases)
   )
+
+cases
 ```
 
 
@@ -221,7 +229,7 @@ cases |>
   filter(year(date) %in% c(2020, 2021)) |>
   mutate(
     year = year(date),
-    month = month(date, label = TRUE, abbr = FALSE)
+    month = month(date, label = TRUE, abbr = FALSE, locale = "en_US.UTF-8")
   ) |>
   group_by(year, month) |>
   summarize(total_cases = sum(cases, na.rm = TRUE), .groups = "drop") |>
@@ -266,10 +274,7 @@ deaths |>
   mutate(state = reorder(state, total_deaths)) |>
   ggplot(aes(x = total_deaths, y = state)) +
   geom_col(fill = "red") +
-  labs(
-    title = "Top 10 States by Total COVID-19 Deaths",
-    x = "Total Deaths",
-    y = "State"
+  labs(title = "Top 10 States by Total COVID-19 Deaths",x = "Total Deaths",y = "State"
   ) +
   theme_minimal()
 ```
